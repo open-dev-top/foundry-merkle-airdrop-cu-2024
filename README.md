@@ -1,5 +1,65 @@
 # Merkle Airdrop Extravaganza 
 
+## Notes
+#### How morkel tree works
+```
+keccak256(account + amount) => leaf
+MakeMerkle(account + amount) => leaf + root + proof
+MerkelProof.verify(leaf, proof, root) {
+  leaf`Accept` + proof`Known` == root`Known`
+}
+```
+Expected Root = leaf + proof
+Acutual Root = root
+
+#### How to create a signature and verify it
+Signature: user + message => v, r, f
+Verify: v, r, f + message => user
+
+Assemble message
+```
+    // message we expect to have been signed
+    function getMessageHash(address account, uint256 amount) public view returns (bytes32) {
+        return _hashTypedDataV4(
+            keccak256(abi.encode(MESSAGE_TYPEHASH, AirdropClaim({ account: account, amount: amount })))
+        );
+    }
+```
+
+Create signature
+```
+    function signMessage(uint256 privKey, address account) public view returns (uint8 v, bytes32 r, bytes32 s) {
+        bytes32 hashedMessage = airdrop.getMessageHash(account, amountToCollect);
+        (v, r, s) = vm.sign(privKey, hashedMessage);
+    }
+```
+
+Verify transaction
+```
+    // verify whether the recovered signer is the expected signer/the account to airdrop tokens for
+    function _isValidSignature(
+        address signer,
+        bytes32 digest,
+        uint8 _v,
+        bytes32 _r,
+        bytes32 _s
+    )
+        internal
+        pure
+        returns (bool)
+    {
+        // could also use SignatureChecker.isValidSignatureNow(signer, digest, signature)
+        (
+            address actualSigner,
+            /*ECDSA.RecoverError recoverError*/
+            ,
+            /*bytes32 signatureLength*/
+        ) = ECDSA.tryRecover(digest, _v, _r, _s);
+        return (actualSigner == signer);
+    }
+```
+
+
 This is a section of the [Cyfrin Updraft Advanced Foundry Course](https://updraft.cyfrin.io/). In this repo, we will learn about signatures, merkle drops, and more. 
 
 - [Merkle Airdrop Extravaganza](#merkle-airdrop-extravaganza)
